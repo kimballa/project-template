@@ -7,6 +7,8 @@ import java.util.Iterator;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MapReduceBase;
 import org.apache.hadoop.mapred.OutputCollector;
@@ -17,7 +19,7 @@ import org.apache.hadoop.mapred.Reducer;
  * Reducer for %ProjectName%.
  */
 public class %ProjectName%Reducer extends MapReduceBase
-    implements Reducer<KIN, VIN, KOUT, VOUT> {
+    implements Reducer<LongWritable, Text, LongWritable, Text> {
 
   public static final Log LOG = LogFactory.getLog(
       %ProjectName%Reducer.class.getName());
@@ -27,8 +29,11 @@ public class %ProjectName%Reducer extends MapReduceBase
   }
 
   @Override
-  public void reduce(KIN key, Iterator<VIN> vals,
-      OutputCollector<KOUT, VOUT> output, Reporter reporter)
+  public void reduce(LongWritable key, Iterator<Text> vals,
+      OutputCollector<LongWritable, Text> output, Reporter reporter)
       throws IOException { 
+    while (vals.hasNext()) {
+      output.collect(key, vals.next());
+    }
   }
 }

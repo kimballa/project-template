@@ -2,6 +2,8 @@
 
 package %main.package%;
 
+import java.io.IOException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configured;
@@ -21,14 +23,14 @@ public class %ProjectName% extends Configured implements Tool {
   public static final Log LOG = LogFactory.getLog(
       %ProjectName%.class.getName());
 
-  private int runMapRedJob() {
+  private int runMapRedJob() throws IOException {
     JobConf job = new JobConf(getConf());
     job.setJarByClass(%ProjectName%.class);
     job.setMapperClass(%ProjectName%Mapper.class);
     job.setReducerClass(%ProjectName%Reducer.class);
 
     FileInputFormat.addInputPath(job, new Path("%proj.name%-input"));
-    FileOutputFormat.setInputPath(job, new Path("%proj.name%-output"));
+    FileOutputFormat.setOutputPath(job, new Path("%proj.name%-output"));
 
     JobClient.runJob(job);
     return 0;

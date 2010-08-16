@@ -100,19 +100,28 @@ def copy_src_files(srcnature, main_package, main_package_dir, proj_main_name,
 
 
   dest_java_dir = os.path.join(projdir, "src", "java", main_package_dir)
-  os.makedirs(dest_java_dir)
+  if not os.path.exists(dest_java_dir):
+    os.makedirs(dest_java_dir)
   shutil.copy(os.path.join(srcdir, "mainclass.java"), \
       os.path.join(dest_java_dir, proj_main_name + ".java"))
+  if os.path.exists(os.path.join(srcdir, "mapper.java")):
+    shutil.copy(os.path.join(srcdir, "mapper.java"), \
+        os.path.join(dest_java_dir, proj_main_name + "Mapper.java"))
+  if os.path.exists(os.path.join(srcdir, "reducer.java")):
+    shutil.copy(os.path.join(srcdir, "reducer.java"), \
+        os.path.join(dest_java_dir, proj_main_name + "Reducer.java"))
 
   if os.path.exists(os.path.join(srcdir, "maintest.java")):
     dest_test_dir = os.path.join(projdir, "src", "test", main_package_dir)
-    os.makedirs(dest_test_dir)
+    if not os.path.exists(dest_test_dir):
+      os.makedirs(dest_test_dir)
     shutil.copy(os.path.join(srcdir, "maintest.java"), \
         os.path.join(dest_test_dir, "Test" + proj_main_name + ".java"))
 
   if os.path.exists(os.path.join(srcdir, "mainbin")):
     dest_bin_dir = os.path.join(projdir, "bin")
-    os.makedirs(dest_bin_dir)
+    if not os.path.exists(dest_bin_dir):
+      os.makedirs(dest_bin_dir)
     shutil.copy(os.path.join(srcdir, "mainbin"), \
         os.path.join(dest_bin_dir, projname))
 
@@ -159,9 +168,11 @@ def main(argv):
       proj_main_name, projdir, projname)
 
   if projtype == TYPE_MAPREDUCE:
-    copy_src_files("mapreduce", projname, projdir)
+    copy_src_files("mapreduce", main_package, main_package_dir, \
+        proj_main_name, projdir, projname)
   elif projtype == TYPE_MAPRED:
-    copy_src_files("mapred", projname, projdir)
+    copy_src_files("mapred", main_package, main_package_dir, \
+        proj_main_name, projdir, projname)
 
   substitute_vars(projdir, "github.user", github_username)
   substitute_vars(projdir, "proj.name", projname)

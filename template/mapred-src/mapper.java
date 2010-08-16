@@ -6,6 +6,8 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.MapReduceBase;
@@ -16,7 +18,7 @@ import org.apache.hadoop.mapred.Reporter;
  * Mapper for %ProjectName%.
  */
 public class %ProjectName%Mapper extends MapReduceBase
-    implements Mapper<KIN, VIN, KOUT, VOUT> {
+    implements Mapper<LongWritable, Text, LongWritable, Text> {
 
   public static final Log LOG = LogFactory.getLog(
       %ProjectName%Mapper.class.getName());
@@ -26,8 +28,9 @@ public class %ProjectName%Mapper extends MapReduceBase
   }
 
   @Override
-  public void map(KIN key, VIN val, OutputCollector<KOUT, VOUT> output,
-      Reporter reporter) throws IOException {
+  public void map(LongWritable key, Text val,
+      OutputCollector<LongWritable, Text> output, Reporter reporter)
+      throws IOException {
     output.collect(key, val);
   }
 }

@@ -108,7 +108,7 @@ def copy_src_files(srcnature, main_package, main_package_dir, proj_main_name,
     dest_test_dir = os.path.join(projdir, "src", "test", main_package_dir)
     os.makedirs(dest_test_dir)
     shutil.copy(os.path.join(srcdir, "maintest.java"), \
-        os.path.join(dest_test_dir, proj_main_name + ".java"))
+        os.path.join(dest_test_dir, "Test" + proj_main_name + ".java"))
 
   if os.path.exists(os.path.join(srcdir, "mainbin")):
     dest_bin_dir = os.path.join(projdir, "bin")

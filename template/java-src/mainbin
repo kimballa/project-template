@@ -125,6 +125,6 @@ add_to_classpath ${%PROJNAME%_JAR_DIR}
 export %PROJNAME%_CLASSPATH
 export %PROJNAME%_JAR_DIR
 
-exec java ${JAVA_OPTS} -classpath "$%PROJNAME%_CLASSPATH} \
+exec java ${JAVA_OPTS} -classpath "${%PROJNAME%_CLASSPATH}" \
     %main.package%.%ProjectName% "$@"
 

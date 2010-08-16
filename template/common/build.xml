@@ -27,7 +27,6 @@
   <property name="src.dir" location="${base.src.dir}/java" />
   <property name="test.dir" location="${base.src.dir}/test" />
   <property name="lib.dir" location="${basedir}/lib" />
-  <property name="docs.src.dir" location="${base.src.dir}/docs" />
 
   <property name="build.dir" location="${basedir}/build" />
   <property name="build.src.dir" location="${build.dir}/src" />
@@ -38,8 +37,6 @@
   <property name="test.log.dir" location="${build.dir}/test/logs"/>
   <property name="dist.dir" location="${build.dir}/${artifact.name}" />
   <property name="tar.file" location="${build.dir}/${artifact.name}.tar.gz" />
-  <property name="build.docs.timestamp"
-      location="${build.dir}/docs.timestamp" />
 
   <!-- compilation -->
   <property name="javac.deprecation" value="off"/>
@@ -194,7 +191,7 @@
       description="Compile all sources"/>
 
   <target name="package"
-      depends="jar,compile-all,docs,javadoc,ivy-retrieve-redist"
+      depends="jar,compile-all,javadoc,ivy-retrieve-redist"
       description="Create a redistributable package">
 
     <mkdir dir="${dist.dir}"/>
@@ -223,8 +220,8 @@
     <!-- copy the dependency libraries from ivy into the output lib dir -->
     <mkdir dir="${dist.dir}/lib"/>
     <copy todir="${dist.dir}/lib" includeEmptyDirs="false" flatten="true">
-      <fileset dir="${redist.ivy.lib.dir}">
-        <include name="**/*.jar" />
+      <fileset dir="/">
+        <include name="${redist.ivy.lib.dir}/**/*.jar" />
       </fileset>
     </copy>
 
@@ -364,15 +361,6 @@
     </junit>
   </target>
 
-  <target name="docs-uptodate" depends="init">
-    <uptodate property="docs.uptodate">
-      <srcfiles dir="${basedir}/src/docs/">
-        <include name="**/*.txt" />
-      </srcfiles>
-      <mapper type="merge" to="${build.docs.timestamp}" />
-    </uptodate>
-  </target>
-
   <target name="checkversion">
     <if>
       <contains string="${version}" substring="SNAPSHOT" />
@@ -382,7 +370,7 @@
     </if>
   </target>
 
-  <target name="release" depends="checkversion,tar,docs"
+  <target name="release" depends="checkversion,tar"
       description="Roll a release artifact">
     <echo message="Release complete" />
     <echo message="Binary tar: ${tar.file}" />
@@ -437,16 +425,6 @@
     </artifact:deploy>
   </target>
 
-  <target name="docs" depends="docs-uptodate" unless="docs.uptodate"
-      description="Build documentation">
-    <exec executable="make" failonerror="true">
-      <arg value="-C" />
-      <arg value="${basedir}/src/docs" />
-      <arg value="BUILDROOT=${build.dir}" />
-      <arg value="VERSION=${version}" />
-    </exec>
-    <touch file="${build.docs.timestamp}" />
-  </target>
 
   <target name="javadoc-uptodate" depends="init">
     <uptodate property="javadoc.is.uptodate">

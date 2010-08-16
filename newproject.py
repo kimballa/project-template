@@ -19,7 +19,7 @@ templatedir = "."
 
 def env(var, default):
   """ Return environment variable '$var', or 'default' if unset. """
-  val = os.env(var)
+  val = os.getenv(var)
   if None == val:
     return default
   return val
@@ -39,12 +39,12 @@ def input_string(prompt, default=""):
     return user_response
 
 
-TYPE_MINIMUM = TYPE_JAVA
 
 TYPE_JAVA = 1
 TYPE_MAPREDUCE = 2
 TYPE_MAPRED = 3
 
+TYPE_MINIMUM = TYPE_JAVA
 TYPE_MAXIMUM = TYPE_MAPRED
 
 def get_project_type():
@@ -67,7 +67,7 @@ def get_project_type():
 
 def get_project_name():
   """ Return a project name """
-  projname = input_string("What is the project name?")
+  projname = input_string("What is the project name?", "meep")
   if "" == projname:
     print "Please enter a project name."
     return get_project_name()
@@ -80,7 +80,7 @@ def get_project_dir(name):
   srcroot = env("SRCROOT", os.path.join(os.path.expanduser("~"), "src"))
   defdir = os.path.join(srcroot, name)
 
-  return input_string("Project root directory", defdir)
+  return input_string("Enter the project root directory:", defdir)
 
 
 def copy_base_files(projname, projdir):
@@ -119,8 +119,9 @@ def copy_src_files(srcnature, main_package, main_package_dir, proj_main_name,
 
 def substitute_vars(projdir, varname, value):
   """ Replace %varname% in all files in projdir with value. """
-  print "find \"" + projdir + "\" -type f -exec sed -i -e 's/%" + varname \
-      + "%/" + value + "/' {} \\;"
+  cmd = "find \"" + projdir + "\" -type f -exec sed -i -e 's/%" + varname \
+      + "%/" + value + "/g' {} \\;"
+  os.system(cmd)
 
 
 def main(argv):
@@ -135,10 +136,8 @@ def main(argv):
 
   projtype = get_project_type()
 
-  main_package = ...
-  main_package_dir = main_package.replace(".", "/")
-
-  proj_main_name = input_string("Main class name", projname)
+  default_class_name = projname[0].upper() + projname[1:]
+  proj_main_name = input_string("Main class name", default_class_name)
   github_username = input_string("github username", pwd.getpwuid(os.getuid())[0])
 
   # TODO: Make this parameterized input
@@ -149,7 +148,8 @@ def main(argv):
 
   package_root = env("PACKAGE_ROOT", "org." + projname)
   main_package = input_string("Main package for the project", \
-      package_root + projname)
+      package_root + "." + projname)
+  main_package_dir = main_package.replace(".", "/")
 
   # TODO: Determine the actual dependencies here.
 
@@ -158,9 +158,9 @@ def main(argv):
   copy_src_files("java", main_package, main_package_dir, \
       proj_main_name, projdir, projname)
 
-  if projtype = TYPE_MAPREDUCE:
+  if projtype == TYPE_MAPREDUCE:
     copy_src_files("mapreduce", projname, projdir)
-  elif projtype = TYPE_MAPRED:
+  elif projtype == TYPE_MAPRED:
     copy_src_files("mapred", projname, projdir)
 
   substitute_vars(projdir, "github.user", github_username)
@@ -171,6 +171,7 @@ def main(argv):
   substitute_vars(projdir, "copyright", copyright)
   substitute_vars(projdir, "main.package", main_package)
 
+  print "Created new project in " + projdir
 
 if __name__ == "__main__":
   sys.exit(main(sys.argv))

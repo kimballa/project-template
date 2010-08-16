@@ -9,12 +9,12 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapreduce.Reducer;
 
 /**
- * Reducer for %ProjName%.
+ * Reducer for %ProjectName%.
  */
-public class %ProjName%Reducer extends Reducer<KIN, VIN, KOUT, VOUT> {
+public class %ProjectName%Reducer extends Reducer<KIN, VIN, KOUT, VOUT> {
 
   public static final Log LOG = LogFactory.getLog(
-      %ProjName%Reducer.class.getName());
+      %ProjectName%Reducer.class.getName());
   
   @Override
   protected void setup(Context context)

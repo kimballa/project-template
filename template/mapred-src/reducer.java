@@ -14,13 +14,13 @@ import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.Reducer;
 
 /**
- * Reducer for %ProjName%.
+ * Reducer for %ProjectName%.
  */
-public class %ProjName%Reducer extends MapReduceBase
+public class %ProjectName%Reducer extends MapReduceBase
     implements Reducer<KIN, VIN, KOUT, VOUT> {
 
   public static final Log LOG = LogFactory.getLog(
-      %ProjName%Reducer.class.getName());
+      %ProjectName%Reducer.class.getName());
   
   @Override
   public void configure(JobConf job) {

@@ -3,9 +3,9 @@
 package %main.package%;
 
 /**
- * %ProjName%
+ * %ProjectName%
  */
-public class %ProjName% {
+public class %ProjectName% {
 
   public static void main(String [] args) {
     System.out.println("Hello, world!");

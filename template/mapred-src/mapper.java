@@ -13,13 +13,13 @@ import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 
 /**
- * Mapper for %ProjName%.
+ * Mapper for %ProjectName%.
  */
-public class %ProjName%Mapper extends MapReduceBase
+public class %ProjectName%Mapper extends MapReduceBase
     implements Mapper<KIN, VIN, KOUT, VOUT> {
 
   public static final Log LOG = LogFactory.getLog(
-      %ProjName%Mapper.class.getName());
+      %ProjectName%Mapper.class.getName());
   
   @Override
   public void configure(JobConf job) {

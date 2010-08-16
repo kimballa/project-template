@@ -86,7 +86,7 @@ if [ -z "$%PROJNAME%_HOME" ]; then
 fi
 
 
-# Where to find the main %ProjName% jar
+# Where to find the main %ProjectName% jar
 %PROJNAME%_JAR_DIR=$%PROJNAME%_HOME
 
 # If there's a "build" subdir, override with this, so we use
@@ -104,7 +104,7 @@ function add_to_classpath() {
   export %PROJNAME%_CLASSPATH
 }
 
-# Add %ProjName% dependencies to classpath.
+# Add %ProjectName% dependencies to classpath.
 %PROJNAME%_CLASSPATH=""
 if [ -d "$%PROJNAME%_HOME/lib" ]; then
   add_to_classpath $%PROJNAME%_HOME/lib
@@ -126,5 +126,5 @@ export %PROJNAME%_CLASSPATH
 export %PROJNAME%_JAR_DIR
 
 exec java ${JAVA_OPTS} -classpath "$%PROJNAME%_CLASSPATH} \
-    %main.package%.%ProjName% "$@"
+    %main.package%.%ProjectName% "$@"
 

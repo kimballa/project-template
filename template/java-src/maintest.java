@@ -8,12 +8,12 @@ import org.apache.commons.logging.LogFactory;
 import junit.framework.TestCase;
 
 /**
- * Tests for %ProjName%
+ * Tests for %ProjectName%
  */
-public class Test%ProjName% extends TestCase {
+public class Test%ProjectName% extends TestCase {
 
   public static final Log LOG = LogFactory.getLog(
-      Test%ProjName%.class.getName());
+      Test%ProjectName%.class.getName());
 
   public void setUp() throws Exception {
   }
@@ -21,7 +21,7 @@ public class Test%ProjName% extends TestCase {
   public void tearDown() throws Exception {
   }
 
-  public void test%ProjName%() throws Exception {
+  public void test%ProjectName%() throws Exception {
     LOG.debug("Tests go here.");
   }
 }

@@ -9,12 +9,12 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapreduce.Mapper;
 
 /**
- * Mapper for %ProjName%.
+ * Mapper for %ProjectName%.
  */
-public class %ProjName%Mapper extends Mapper<KIN, VIN, KOUT, VOUT> {
+public class %ProjectName%Mapper extends Mapper<KIN, VIN, KOUT, VOUT> {
 
   public static final Log LOG = LogFactory.getLog(
-      %ProjName%Mapper.class.getName());
+      %ProjectName%Mapper.class.getName());
   
   @Override
   protected void setup(Context context)

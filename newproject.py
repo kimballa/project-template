@@ -160,7 +160,7 @@ def main(argv):
       package_root + "." + projname)
   main_package_dir = main_package.replace(".", "/")
 
-  # TODO: Determine the actual dependencies here.
+  # TODO: Determine the actual dependencies here. Allow config of ivy.xml.
 
   copy_base_files(projname, projdir)
 

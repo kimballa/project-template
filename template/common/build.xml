@@ -1,0 +1,680 @@
+<?xml version="1.0"?>
+
+<!--
+   %copyright%
+-->
+
+<project name="%proj.name%" default="jar"
+    xmlns:artifact="urn:maven-artifact-ant"
+    xmlns:ivy="antlib:org.apache.ivy.ant">
+
+  <!-- Load system-wide and project-wide default properties set by
+       the user, to avoid needing to override with -D. -->
+  <property file="${user.home}/build.properties" />
+  <property file="${basedir}/build.properties" />
+
+  <!-- some basic properties -->
+  <property environment="env"/>
+  <property name="name" value="%proj.name%" />
+  <property name="Name" value="%ProjectName%" />
+  <property name="version" value="1.0.0-SNAPSHOT" />
+  <property name="artifact.name" value="${name}-${version}" />
+  <property name="dest.jar" value="${artifact.name}.jar" />
+  <property name="git.hash" value="" />
+  
+  <!-- locations in the source tree -->
+  <property name="base.src.dir" location="${basedir}/src" />
+  <property name="src.dir" location="${base.src.dir}/java" />
+  <property name="test.dir" location="${base.src.dir}/test" />
+  <property name="lib.dir" location="${basedir}/lib" />
+  <property name="docs.src.dir" location="${base.src.dir}/docs" />
+
+  <property name="build.dir" location="${basedir}/build" />
+  <property name="build.src.dir" location="${build.dir}/src" />
+  <property name="build.classes" location="${build.dir}/classes"/>
+  <property name="build.test" location="${build.dir}/test"/>
+  <property name="build.test.classes" location="${build.test}/classes" />
+  <property name="build.javadoc" location="${build.dir}/docs/api" />
+  <property name="test.log.dir" location="${build.dir}/test/logs"/>
+  <property name="dist.dir" location="${build.dir}/${artifact.name}" />
+  <property name="tar.file" location="${build.dir}/${artifact.name}.tar.gz" />
+  <property name="build.docs.timestamp"
+      location="${build.dir}/docs.timestamp" />
+
+  <!-- compilation -->
+  <property name="javac.deprecation" value="off"/>
+  <property name="javac.debug" value="on"/>
+  <property name="build.encoding" value="ISO-8859-1"/>
+
+  <!-- testing with JUnit -->
+  <property name="test.junit.output.format" value="plain"/>
+  <property name="test.output" value="no"/>
+  <property name="test.timeout" value="300000"/>
+
+  <!-- static analysis -->
+  <property name="findbugs.out.dir" value="${build.dir}/findbugs" />
+  <property name="findbugs.output.xml.file"
+      value="${findbugs.out.dir}/report.xml" />
+  <property name="findbugs.output.html.file"
+      value="${findbugs.out.dir}/report.html" />
+  <property name="findbugs.excludes"
+      location="${test.dir}/findbugsExcludeFile.xml" />
+
+  <!-- maven -->
+  <property name="mvn.build.dir" value="${build.dir}/m2" />
+  <property name="mvn.repo" value="snapshots" />
+  <property name="mvn.repo.id" value="cloudera.${mvn.repo}.repo" />
+  <property name="mvn.deploy.url"
+      value="https://repository.cloudera.com/content/repositories/${mvn.repo}"/>
+  <property name="main.pom.file"
+      value="${mvn.build.dir}/${name}.pom" />
+
+  <!-- code coverage -->
+  <property name="cobertura.dir" value="${build.dir}/cobertura" />
+  <property name="cobertura.home" value="${cobertura.dir}" />
+  <property name="cobertura.report.dir" value="${cobertura.dir}/report" />
+  <property name="cobertura.format" value="html" /> <!-- may be 'xml' -->
+  <property name="cobertura.class.dir" value="${cobertura.dir}/classes" />
+
+  <!-- Checking code style -->
+  <property name="checkstyle.xml" value="${test.dir}/checkstyle.xml" />
+  <property name="checkstyle.format.xsl"
+      value="${test.dir}/checkstyle-noframes.xsl" />
+  <property name="checkstyle.report.dir" value="${build.dir}" />
+
+  <!-- Release audit -->
+  <property name="rat.reporting.classname" value="rat.Report"/>
+
+  <!-- Ivy-based dependency resolution -->
+  <property name="ivy.dir" location="${basedir}/ivy" />
+  <property name="ivysettings.xml" location="${ivy.dir}/ivysettings.xml"/>
+  <loadproperties srcfile="${ivy.dir}/libraries.properties"/>
+  <property name="ivy.jar" location="${lib.dir}/ivy-${ivy.version}.jar"/>
+  <property name="ivy_repo_url" 
+	value="http://repo2.maven.org/maven2/org/apache/ivy/ivy/${ivy.version}/ivy-${ivy.version}.jar" />
+  <property name="mvn_repo_url"
+  value="http://repo2.maven.org/maven2/org/apache/maven/maven-ant-tasks/${mvn.version}/maven-ant-tasks-${mvn.version}.jar"/>
+  <property name="mvn.jar"
+      location="${build.dir}/maven-ant-tasks-${mvn.version}.jar" />
+  <property name="build.ivy.dir" location="${build.dir}/ivy" />
+  <property name="build.ivy.lib.dir" location="${build.ivy.dir}/lib" />
+  <property name="build.ivy.report.dir" location="${build.ivy.dir}/report" />
+  <property name="redist.ivy.lib.dir"
+      location="${build.ivy.lib.dir}/${name}/redist"/> 
+
+  <!--this is the naming policy for artifacts we want pulled down-->
+  <property name="ivy.artifact.retrieve.pattern"
+    			value="${name}/[conf]/[artifact]-[revision].[ext]"/>
+
+  <!-- load ant-contrib tasks to get the "if" task. -->
+  <taskdef resource="net/sf/antcontrib/antcontrib.properties">
+    <classpath>
+      <pathelement location="${basedir}/lib/ant-contrib-1.0b3.jar"/>
+    </classpath>
+  </taskdef>
+
+  <!-- Path containing third-party libraries directly deployed.
+       This does not include anything that Ivy can retrieve for us.
+    -->
+  <path id="lib.path">
+    <fileset dir="${lib.dir}">
+      <include name="*.jar" />
+    </fileset>
+  </path>
+
+  <!-- The classpath for compiling and running %proj.name% -->
+  <path id="compile.classpath">
+    <pathelement location="${build.classes}"/>
+    <path refid="lib.path"/>
+    <path refid="${name}.common.classpath"/>
+  </path>
+
+  <path id="cobertura.classpath">
+    <fileset dir="${cobertura.home}">
+      <include name="**/*.jar" />
+    </fileset>
+  </path>
+
+
+  <!-- Classpath for unit tests (superset of compile.classpath) -->
+  <path id="test.classpath">
+    <pathelement location="${build.test.classes}" />
+    <path refid="${name}.test.classpath" />
+    <path refid="compile.classpath" />
+  </path>
+
+  <!-- "init" target used for setup purposes. --> 
+  <target name="init">
+  </target>
+
+  <!-- Compile core classes for the project -->
+  <target name="compile"
+      depends="init, ivy-retrieve-common"
+      description="Compile core classes for the project">
+    <!-- don't use an out-of-date instrumented build. -->
+    <delete dir="${cobertura.class.dir}" />
+    <!-- ensure normal build target dir exists -->
+    <mkdir dir="${build.classes}" />
+
+    <!-- Compile the main code. -->
+    <javac
+        encoding="${build.encoding}"
+        srcdir="${src.dir}"
+        includes="**/*.java"
+        destdir="${build.classes}"
+        debug="${javac.debug}"
+        deprecation="${javac.deprecation}">
+      <classpath refid="compile.classpath"/>
+    </javac>
+  </target>
+
+  <target name="compile-test"
+      depends="compile, ivy-retrieve-test"
+      description="Compile test classes">
+    <mkdir dir="${build.test.classes}" />
+    <javac
+        encoding="${build.encoding}"
+        srcdir="${test.dir}"
+        includes="**/*.java"
+        destdir="${build.test.classes}"
+        debug="${javac.debug}">
+      <classpath>
+        <path refid="test.classpath"/>
+      </classpath>
+    </javac>
+  </target>
+
+  <target name="jar" depends="compile" description="Create main jar">
+    <jar jarfile="${build.dir}/${dest.jar}" basedir="${build.classes}" />
+  </target>
+
+  <!-- Ensure that all source code can be built -->
+  <target name="compile-all"
+      depends="compile,compile-test"
+      description="Compile all sources"/>
+
+  <target name="package"
+      depends="jar,compile-all,docs,javadoc,ivy-retrieve-redist"
+      description="Create a redistributable package">
+
+    <mkdir dir="${dist.dir}"/>
+
+    <!-- copy in the build artifact -->
+    <copy todir="${dist.dir}" includeEmptyDirs="false" flatten="true">
+      <fileset dir="${build.dir}">
+        <include name="${dest.jar}" />
+      </fileset>
+    </copy>
+
+    <!-- copy in various components of the initial source layout
+         so that the redistributable can bootstrap itself. -->
+    <copy todir="${dist.dir}" includeEmptyDirs="false" flatten="false">
+      <fileset dir="${basedir}">
+        <include name="**/*" />
+        <exclude name="build/**" />
+        <exclude name="lib/**" />
+        <exclude name=".git/**" />
+        <exclude name="tags" />
+        <exclude name=".project" />
+        <exclude name=".classpath" />
+      </fileset>
+    </copy>
+
+    <!-- copy the dependency libraries from ivy into the output lib dir -->
+    <mkdir dir="${dist.dir}/lib"/>
+    <copy todir="${dist.dir}/lib" includeEmptyDirs="false" flatten="true">
+      <fileset dir="${redist.ivy.lib.dir}">
+        <include name="**/*.jar" />
+      </fileset>
+    </copy>
+
+    <copy todir="${dist.dir}/lib" includeEmptyDirs="false">
+      <fileset dir="${lib.dir}">
+        <include name="**/*" />
+        <exclude name="ivy*" />
+      </fileset>
+    </copy>
+
+    <!-- copy in documentation build artifacts -->
+    <copy todir="${dist.dir}/docs" includeEmptyDirs="false" flatten="false">
+      <fileset dir="${build.dir}/docs">
+        <include name="**/*.html" />
+      </fileset>
+    </copy>
+
+    <!-- make sure the bin scripts are executable. -->
+    <chmod perm="ugo+x" type="file" parallel="false">
+      <fileset dir="${dist.dir}/bin" />
+    </chmod>
+
+    <!-- make sure any scripts named *.sh are executable. -->
+    <chmod perm="ugo+x" type="file" parallel="false">
+      <fileset dir="${dist.dir}">
+        <include name="**/*.sh" />
+      </fileset>
+    </chmod>
+  </target>
+
+  <target name="tar" depends="package" description="Create release tarball">
+    <tar compression="gzip" longfile="gnu" destfile="${tar.file}">
+      <tarfileset dir="${build.dir}" mode="664">
+        <exclude name="${artifact.name}/bin/*" />
+        <exclude name="${artifact.name}/**/*.sh" />
+        <include name="${artifact.name}/**" />
+      </tarfileset>
+      <tarfileset dir="${build.dir}" mode="755">
+        <include name="${artifact.name}/bin/*" />
+        <include name="${artifact.name}/**/*.sh" />
+      </tarfileset>
+    </tar>
+  </target>
+
+  <!-- set variables that configure the actual test -->
+  <target name="test-prep">
+    <property name="test.pattern" value="Test*" />
+    <property name="cobertura.testset" value="base" />
+  </target>
+
+  <!-- ================================================================== -->
+  <!-- Run unit tests                                                     -->
+  <!-- By default, we'll run the "normal" tests: Test*.java               -->
+  <!-- To run third-party tests, run with -Dthirdparty=true               -->
+  <!-- ================================================================== -->
+  <target name="test"
+      depends="compile-test,compile,test-prep,run-tests"
+      description="Run unit tests" />
+
+  <!-- actually run the selected unit tests -->
+  <target name="run-tests"
+      depends="compile-test,compile,test-prep">
+    <antcall target="checkfailure" inheritRefs="true" />
+  </target>
+ 
+  <target name="test-core">
+    <!-- inner target only intended to be used via antcall.
+         Does not define its dependencies. Should be invoked through the
+         'test' target. Does not fail the build if tests fail.
+    -->
+
+    <delete dir="${test.log.dir}"/>
+    <mkdir dir="${test.log.dir}"/>
+    <delete dir="${build.test}/data"/>
+    <mkdir dir="${build.test}/data" />
+    <mkdir dir="${cobertura.class.dir}" />
+    <junit
+      printsummary="yes" showoutput="${test.output}"
+      haltonfailure="no" fork="yes" maxmemory="256m"
+      errorProperty="tests.failed" failureProperty="tests.failed"
+      timeout="${test.timeout}"
+      dir="${build.test}/data">
+
+      <!-- enable asserts in tests -->
+      <jvmarg value="-ea" />
+
+      <!-- uncomment this if you want to attach a debugger -->
+      <!--
+      <jvmarg line="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=2601" />
+      -->
+
+      <sysproperty key="test.build.data" value="${build.test}/data"/>
+      <sysproperty key="build.test" value="${build.test}"/>
+
+      <sysproperty key="net.sourceforge.cobertura.datafile"
+          value="${cobertura.dir}/cobertura-${cobertura.testset}.ser" />
+
+      <!-- we want more log4j output when running unit tests -->
+      <sysproperty key="hadoop.root.logger"
+        value="DEBUG,console" />
+
+      <!-- requires fork=yes for:
+        relative File paths to use the specified user.dir
+        classpath to use build/*.jar
+      -->
+      <sysproperty key="user.dir" value="${build.test}/data"/>
+
+      <!-- Override standalone Hadoop's working dirs to allow parallel
+           execution of multiple Hudson builders
+      -->
+      <sysproperty key="hadoop.tmp.dir" value="${build.test}/hadoop"/>
+
+      <sysproperty key="fs.default.name" value="${fs.default.name}"/>
+      <sysproperty key="hadoop.test.localoutputfile"
+          value="${hadoop.test.localoutputfile}"/>
+      <sysproperty key="hadoop.log.dir" value="${test.log.dir}"/>
+
+      <classpath>
+        <!-- instrumented classes go ahead of normal classes -->
+        <pathelement location="${cobertura.class.dir}" />
+
+        <!-- main classpath here. -->
+        <path refid="test.classpath" />
+
+        <!-- include cobertura itself on the classpath -->
+        <path refid="cobertura.classpath" />
+      </classpath>
+      <formatter type="${test.junit.output.format}" />
+      <batchtest todir="${build.test}" unless="testcase">
+        <fileset dir="${test.dir}"
+                 includes="**/${test.pattern}.java"
+                 excludes="**/${test.exclude}.java" />
+      </batchtest>
+      <batchtest todir="${build.test}" if="testcase">
+        <fileset dir="${test.dir}" includes="**/${testcase}.java"/>
+      </batchtest>
+    </junit>
+  </target>
+
+  <target name="docs-uptodate" depends="init">
+    <uptodate property="docs.uptodate">
+      <srcfiles dir="${basedir}/src/docs/">
+        <include name="**/*.txt" />
+      </srcfiles>
+      <mapper type="merge" to="${build.docs.timestamp}" />
+    </uptodate>
+  </target>
+
+  <target name="checkversion">
+    <if>
+      <contains string="${version}" substring="SNAPSHOT" />
+      <then>
+        <fail message="Error: cannot release a snapshot. Set -Dversion" />
+      </then>
+    </if>
+  </target>
+
+  <target name="release" depends="checkversion,tar,docs"
+      description="Roll a release artifact">
+    <echo message="Release complete" />
+    <echo message="Binary tar: ${tar.file}" />
+    <echo message="Docs: ${build.dir}/docs" />
+  </target>
+
+  <target name="mvn-prep" depends="init,ivy-resolve-common">
+    <!-- prepare for mvn tasks. -->
+
+    <!-- Download maven -->
+    <mkdir dir="${build.dir}" />
+    <get src="${mvn_repo_url}" dest="${mvn.jar}" usetimestamp="true" />
+
+    <!-- Register mvn tasks -->
+    <path id="mvn-ant-task.classpath" path="${mvn.jar}" />
+    <typedef resource="org/apache/maven/artifact/ant/antlib.xml" 
+        uri="urn:maven-artifact-ant"
+        classpathref="mvn-ant-task.classpath"/>
+
+    <!-- generate our poms from our ivy files. -->
+    <mkdir dir="${mvn.build.dir}" />
+    <ivy:makepom ivyfile="ivy.xml" pomfile="${main.pom.file}"
+        settingsRef="${name}.ivy.settings">
+      <mapping conf="default" scope="compile" />
+      <mapping conf="runtime" scope="runtime" />
+    </ivy:makepom>
+
+    <!-- Change the version in the pom file to reflect our claimed version. -->
+    <replaceregexp>
+      <regexp pattern="&lt;version&gt;.*&lt;/version&gt;" />
+      <substitution expression="&lt;version&gt;${version}&lt;/version&gt;" />
+      <fileset dir="${mvn.build.dir}">
+        <include name="*.pom" />
+      </fileset>
+    </replaceregexp>
+  </target>
+
+  <target name="mvn-install" depends="init,mvn-prep,jar"
+      description="Install %proj.name% in local m2 repository">
+    <artifact:pom file="${main.pom.file}" id="%proj.name%" />
+    <artifact:install file="${build.dir}/${dest.jar}">
+      <pom refid="%proj.name%" />
+    </artifact:install>
+  </target>
+
+  <target name="mvn-deploy" depends="mvn-prep,jar"
+      description="Deploy %proj.name% to public maven repository">
+    <artifact:pom file="${main.pom.file}" id="%proj.name%" />
+    <artifact:deploy file="${build.dir}/${dest.jar}">
+      <remoteRepository id="${mvn.repo.id}" url="${mvn.deploy.url}"/>
+      <pom refid="%proj.name%" />
+    </artifact:deploy>
+  </target>
+
+  <target name="docs" depends="docs-uptodate" unless="docs.uptodate"
+      description="Build documentation">
+    <exec executable="make" failonerror="true">
+      <arg value="-C" />
+      <arg value="${basedir}/src/docs" />
+      <arg value="BUILDROOT=${build.dir}" />
+      <arg value="VERSION=${version}" />
+    </exec>
+    <touch file="${build.docs.timestamp}" />
+  </target>
+
+  <target name="javadoc-uptodate" depends="init">
+    <uptodate property="javadoc.is.uptodate">
+      <srcfiles dir="${src.dir}">
+        <include name="**/*.java" />
+        <include name="**/*.html" />
+      </srcfiles>
+      <mapper type="merge" to="${build.javadoc}/index.html" />
+    </uptodate>
+  </target>
+
+  <target name="javadoc" description="Build javadoc"
+      depends="init,javadoc-uptodate,compile" unless="javadoc.is.uptodate">
+    <mkdir dir="${build.javadoc}" />
+    <exec executable="date" outputproperty="year">
+      <arg value="+%Y" />
+    </exec>
+    <javadoc
+      packagenames="%main.package%.*"
+      destdir="${build.javadoc}"
+      author="true"
+      version="true"
+      use="true"
+      windowtitle="${Name} ${version} API"
+      doctitle="${Name} ${version} API"
+      bottom="Copyright &amp;copy; ${year} Cloudera, Inc.">
+      <packageset dir="${src.dir}" />
+      <classpath>
+        <path refid="compile.classpath" />
+      </classpath>
+    </javadoc>
+  </target>
+
+  <target name="checkfailure" depends="test-core" if="tests.failed">
+    <touch file="${build.dir}/testsfailed"/>
+    <fail unless="continueOnFailure">Unit tests failed!</fail>
+  </target>
+
+  <target name="clean" description="Clean build target files">
+    <delete dir="${build.dir}"/>
+  </target>
+
+  <target name="clean-cache" description="Remove cached dependencies">
+    <delete dir="${user.home}/.ivy2/cache/%main.package%" />
+    <delete file="${ivy.jar}" />
+  </target>
+
+  <target name="veryclean"
+      depends="clean,clean-cache"
+      description="Clean build and remove cached dependencies">
+  </target>
+
+  <target name="findbugs" depends="check-for-findbugs,jar,compile-test"
+      if="findbugs.present" description="Run FindBugs">
+    <taskdef name="findbugs" classname="edu.umd.cs.findbugs.anttask.FindBugsTask"
+        classpath="${findbugs.home}/lib/findbugs-ant.jar" />
+    <mkdir dir="${findbugs.out.dir}"/>
+    <findbugs home="${findbugs.home}" output="xml:withMessages"
+        outputFile="${findbugs.output.xml.file}" effort="max"
+        excludeFilter="${findbugs.excludes}">
+      <auxClasspath>
+        <path refid="test.classpath"/>
+      </auxClasspath>
+      <sourcePath path="${src.dir}" />
+      <sourcePath path="${test.dir}" />
+      <class location="${build.dir}/${dest.jar}" />
+      <class location="${build.test.classes}" />
+    </findbugs>
+    <xslt style="${findbugs.home}/src/xsl/default.xsl"
+        in="${findbugs.output.xml.file}"
+        out="${findbugs.output.html.file}" />
+  </target>
+
+  <target name="warn-findbugs-unset" unless="findbugs.home">
+    <fail message="You need to set -Dfindbugs.home=/path/to/findbugs" />
+  </target>
+
+  <target name="check-for-findbugs" depends="warn-findbugs-unset">
+    <available property="findbugs.present"
+        file="${findbugs.home}/lib/findbugs.jar" />
+  </target>
+
+  <target name="cobertura"
+      depends="check-for-cobertura,warn-cobertura-unset,jar,compile-test,test-prep"
+      if="cobertura.present" description="Run Cobertura (code coverage)">
+    <taskdef classpathref="cobertura.classpath"
+        resource="tasks.properties"/>
+    <mkdir dir="${cobertura.class.dir}" />
+    <cobertura-instrument todir="${cobertura.class.dir}"
+        datafile="${cobertura.dir}/cobertura-${cobertura.testset}.ser">
+      <fileset dir="${build.classes}">
+        <include name="**/*.class" />
+      </fileset>
+    </cobertura-instrument>
+
+    <!-- Run the unit tests, but do not fail the build if tests fail. -->
+    <antcall target="test-core" inheritRefs="true" />
+
+    <!-- merge the reports together from the internal and thirdparty tests -->
+    <delete file="${cobertura.dir}/cobertura.ser" />
+    <cobertura-merge datafile="${cobertura.dir}/cobertura.ser">
+      <fileset dir="${cobertura.dir}">
+        <include name="*.ser" />
+      </fileset>
+    </cobertura-merge>
+    <delete dir="${cobertura.report.dir}" />
+    <cobertura-report srcdir="${src.dir}" destdir="${cobertura.report.dir}"
+        format="${cobertura.format}"
+        datafile="${cobertura.dir}/cobertura.ser" />
+  </target>
+
+  <target name="warn-cobertura-unset" depends="check-for-cobertura"
+      unless="cobertura.present">
+    <fail message="You need to set -Dcobertura.home=/path/to/cobertura" />
+  </target>
+
+  <target name="check-for-cobertura">
+    <available property="cobertura.present"
+        file="${cobertura.home}/cobertura.jar" />
+  </target>
+
+  <target name="checkstyle" depends="ivy-retrieve-checkstyle, compile-all"
+      description="Check source code conventions">
+    <taskdef resource="checkstyletask.properties">
+      <classpath refid="${name}.checkstyle.classpath" />
+    </taskdef>
+
+    <mkdir dir="${checkstyle.report.dir}" />
+    <checkstyle config="${checkstyle.xml}" failOnViolation="false">
+      <fileset dir="${base.src.dir}" includes="**/*.java" />
+      <classpath refid="test.classpath"/>
+      <formatter type="xml"
+          toFile="${checkstyle.report.dir}/checkstyle-errors.xml" />
+    </checkstyle>
+
+    <xslt style="${checkstyle.format.xsl}"
+        in="${checkstyle.report.dir}/checkstyle-errors.xml"
+        out="${checkstyle.report.dir}/checkstyle-errors.html" />
+  </target>
+
+  <target name="ivy-probe-antlib" >
+    <condition property="ivy.found">
+      <typefound uri="antlib:org.apache.ivy.ant" name="cleancache"/>
+    </condition>
+  </target>
+
+  <!-- Downloads the ivy jar itself. -->
+  <target name="ivy-download" unless="offline">
+    <mkdir dir="${lib.dir}" />
+    <get src="${ivy_repo_url}" dest="${ivy.jar}" usetimestamp="true"/>
+  </target>
+
+  <target name="ivy-init-antlib" depends="ivy-download,ivy-probe-antlib"
+      unless="ivy.found">
+    <typedef uri="antlib:org.apache.ivy.ant" onerror="fail"
+      loaderRef="ivyLoader">
+      <classpath>
+        <pathelement location="${ivy.jar}"/>
+      </classpath>
+    </typedef>
+    <fail >
+      <condition >
+        <not>
+          <typefound uri="antlib:org.apache.ivy.ant" name="cleancache"/>
+        </not>
+      </condition>
+      You need Apache Ivy 2.0 or later from http://ant.apache.org/
+      It could not be loaded from ${ivy_repo_url}
+    </fail>
+  </target>
+
+  <target name="ivy-init" depends="ivy-init-antlib" unless="ivy.configured">
+    <ivy:configure settingsid="${name}.ivy.settings" file="${ivysettings.xml}"/>
+    <property name="ivy.configured" value="true" />
+  </target>
+
+  <!-- retrieve ivy-managed artifacts for the compile configuration -->
+  <target name="ivy-resolve-common" depends="ivy-init">
+    <ivy:resolve settingsRef="${name}.ivy.settings" conf="common" />
+  </target>
+  <target name="ivy-retrieve-common" depends="ivy-resolve-common">
+    <ivy:retrieve settingsRef="${name}.ivy.settings" 
+      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}" sync="true" />
+    <ivy:cachepath pathid="${name}.common.classpath" conf="common" />
+  </target>
+
+  <!-- retrieve ivy-managed artifacts for the test configuration -->
+  <target name="ivy-resolve-test" depends="ivy-init">
+    <ivy:resolve settingsRef="${name}.ivy.settings" conf="test" />
+  </target>
+  <target name="ivy-retrieve-test" depends="ivy-resolve-test">
+    <ivy:retrieve settingsRef="${name}.ivy.settings"
+      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}" sync="true" />
+    <ivy:cachepath pathid="${name}.test.classpath" conf="test" />
+  </target>
+
+  <!-- retrieve ivy-managed artifacts for the redist configuration -->
+  <target name="ivy-resolve-redist" depends="ivy-init">
+    <ivy:resolve settingsRef="${name}.ivy.settings" conf="redist" />
+  </target>
+  <target name="ivy-retrieve-redist" depends="ivy-resolve-redist">
+    <ivy:retrieve settingsRef="${name}.ivy.settings"
+      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}" sync="true" />
+    <ivy:cachepath pathid="${name}.redist.classpath" conf="redist" />
+  </target>
+
+  <!-- retrieve ivy-managed artifacts for checkstyle -->
+  <target name="ivy-resolve-checkstyle" depends="ivy-init">
+    <ivy:resolve settingsRef="${name}.ivy.settings" conf="checkstyle" />
+  </target>
+  <target name="ivy-retrieve-checkstyle" depends="ivy-resolve-checkstyle">
+    <ivy:retrieve settingsRef="${name}.ivy.settings"
+      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}" sync="true" />
+    <ivy:cachepath pathid="${name}.checkstyle.classpath" conf="checkstyle" />
+  </target>
+
+  <target name="eclipse" description="Generate Eclipse project"
+      depends="init,ivy-retrieve-common,ivy-retrieve-test">
+    <taskdef name="eclipse" classname="prantl.ant.eclipse.EclipseTask"
+        classpath="${lib.dir}/ant-eclipse-1.0-jvm1.2.jar" />
+    <eclipse failonerror="true" updatealways="true">
+      <project name="${name}" />
+      <classpath>
+        <source path="src/java" />
+        <source path="src/test" />
+        <output path="${build.dir}/eclipse-build" />
+        <library pathref="test.classpath" />
+      </classpath>
+    </eclipse>
+  </target>
+</project>

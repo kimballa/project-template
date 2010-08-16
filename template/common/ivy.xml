@@ -1,0 +1,62 @@
+<?xml version="1.0" ?>
+
+<!--
+   (c) Copyright 2010 Cloudera, Inc. All Rights Reserved.
+-->
+
+<ivy-module version="1.0">
+  <info organisation="%main.package%" module="${name}">
+    <license name="%license%"/>
+    <ivyauthor name="%ProjectName% Team" url="http://github.com/%github.user%/%proj.name%" />
+    <description>
+        %ProjectName%
+    </description>
+  </info>
+  <configurations defaultconfmapping="default">
+    <!--these match the Maven configurations-->
+    <conf name="default" extends="master,runtime"/>
+    <conf name="master" description="contains the artifact but no dependencies"/>
+    <conf name="runtime" description="runtime but not the artifact" />
+
+    <conf name="common" visibility="private"
+      extends="runtime"
+      description="artifacts needed to compile/test the application"/>
+
+    <conf name="test" visibility="private" extends="common,runtime"/>
+
+    <!-- We don't redistribute everything we depend on (e.g., Hadoop itself);
+         anything which Hadoop itself also depends on, we do not ship.
+         Things we actually need to ship are marked with a 'redist'
+         configuration. -->
+    <conf name="redist" visibility="private" extends="master" />
+
+    <!-- configuration for running checkstyle -->
+    <conf name="checkstyle" visibility="private" />
+  </configurations>
+
+  <publications>
+    <!--get the artifact from our module name-->
+    <artifact conf="master"/>
+  </publications>
+  <dependencies>
+    <!-- Dependencies for Cloudera's Distribution for Hadoop -->
+    <dependency org="com.cloudera.hadoop" name="hadoop-core"
+      rev="${hadoop-core.cloudera.version}" conf="common->default"/>
+    <dependency org="com.cloudera.hadoop" name="hadoop-test"
+      rev="${hadoop-core.cloudera.version}" conf="test->default"/>
+
+    <!-- Common dependencies -->
+    <dependency org="commons-cli" name="commons-cli"
+      rev="${commons-cli.version}" conf="common->default"/>
+    <dependency org="commons-logging" name="commons-logging"
+      rev="${commons-logging.version}" conf="common->default"/>
+    <dependency org="log4j" name="log4j" rev="${log4j.version}"
+      conf="common->master" />
+    <dependency org="junit" name="junit" rev="${junit.version}"
+      conf="common->default"/>
+    
+    <!-- dependencies for static analysis -->
+    <dependency org="checkstyle" name="checkstyle" rev="${checkstyle.version}"
+      conf="checkstyle->default" />
+  </dependencies>
+</ivy-module>

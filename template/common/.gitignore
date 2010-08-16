@@ -1,0 +1,12 @@
+# %copyright%
+
+/build
+*~
+*.swp
+.classpath
+.project
+.launches
+.settings
+/tags
+/build.properties
+

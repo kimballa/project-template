@@ -1,0 +1,10 @@
+
+This script creates a new Java project with some dependencies already set up.
+Just run './newproject.py' and answer the questions.
+
+The types of projects it will set up are an empty Java project, or two types
+of Hadoop MapReduce applications.
+
+When the project has been created, you can use ant to compile and test your
+project, as well as install it to a local .m2 repository.
+
